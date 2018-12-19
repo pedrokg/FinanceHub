@@ -5,6 +5,7 @@ import pandas as pd
 # https://servicodados.ibge.gov.br/api/v3/agregados    ####   dados agregados
 # http://api.sidra.ibge.gov.br/    ####   consulta SIDRA
 # http://api.sidra.ibge.gov.br/home/ajuda    ###   documentação API SIDRA
+#
 
 def conector(unt,p='last',v='allxp',t=None,c=None,cc=None,f=None,d=None,h=None):
 
