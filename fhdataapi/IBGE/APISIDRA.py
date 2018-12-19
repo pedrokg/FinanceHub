@@ -2,6 +2,10 @@ import requests
 import json
 import pandas as pd
 
+# https://servicodados.ibge.gov.br/api/v3/agregados    ####   dados agregados
+# http://api.sidra.ibge.gov.br/    ####   consulta SIDRA
+# http://api.sidra.ibge.gov.br/home/ajuda    ###   documentação API SIDRA
+
 # Código SEM detalhes, situações de contorno, etc. Não deu tempo.
 
 # Falta detalhar o código para cada parâmetro. Alguns permitem mais de um item, etc.
