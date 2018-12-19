@@ -6,10 +6,6 @@ import pandas as pd
 # http://api.sidra.ibge.gov.br/    ####   consulta SIDRA
 # http://api.sidra.ibge.gov.br/home/ajuda    ###   documentação API SIDRA
 
-# Código SEM detalhes, situações de contorno, etc. Não deu tempo.
-
-# Falta detalhar o código para cada parâmetro. Alguns permitem mais de um item, etc.
-
 def conector(unt,p='last',v='allxp',t=None,c=None,cc=None,f=None,d=None,h=None):
 
     # unt -> nível territorial + unidade territorial. Pode assumir inúmeros valores, separados por barras.
