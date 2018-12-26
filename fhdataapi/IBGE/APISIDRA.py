@@ -2,6 +2,19 @@ import requests
 import json
 import pandas as pd
 import webbrowser
+import re
+from urllib.request import urlopen as uReq
+from bs4 import BeautifulSoup as soup
+
+#######
+# IMPORTANTE: A atual composição desse arquivo visa uma interface mais "user-friendly".
+# Pensando nisso, tranformei o modelo passado (no qual o usuário deveria chamar uma função com as
+# variáveis desejadas) em um modelo no qual o usuário vai respondendo a pedidos de inputs.
+# Acredito, entretanto, que esse formato não seja o mais adequado.
+
+# Além disso, esse arquivo será atualizado em breve, assim que concluída a ferramenta
+# de web scraping do arquivo "consultaSIDRA".
+#######
 
 print('Em caso de dúvidas ao longo da inserção dos parâmetros, consulte http://api.sidra.ibge.gov.br/home/ajuda')
 
@@ -15,12 +28,12 @@ def conector():
 
     # Primera parte da função pede ao usuário o nome do agregado de dados desejado, e obtém o ID.
     # Esse ID obtido permite o acesso ao documento com as variáveis disponíveis para aquele agregado.
-    # Ex1 a ser inserido: "IPCA - Variação mensal, para o índice geral, grupos, subgrupos, itens e subitens de produtos e serviços (de julho/1989 até dezembro/1990)"
-    # Ex2 a ser inserido: "Comercialização de agrotóxicos e afins, total e por área plantada, segundo a classe de uso"
+    # Ex1: "IPCA - Variação mensal, para o índice geral, grupos, subgrupos, itens e subitens de produtos e serviços (de julho/1989 até dezembro/1990)"
+    # Ex2: "Comercialização de agrotóxicos e afins, total e por área plantada, segundo a classe de uso"
 
     # t -> código do agregado de onde serão retirados os dados para as variáveis desejadas. Pode ser obtido pela API de agregados.
     # (Ex: '1327')
-    nome = input('Insira o nome do agregado de dados desejado, de onde os dados deverão ser retirados:')
+    nome = input('Insira o nome do agregado de dados desejado, de onde os dados deverão ser retirados. >>>')
     pesqid = None
     agregados = requests.get('https://servicodados.ibge.gov.br/api/v3/agregados')
     agregadosdata = json.loads(agregados.text)
@@ -38,11 +51,11 @@ def conector():
                 print("Não há esse agregado de dados na base disponível")
 
     if pesqid != None:
-        url = url + '/t/' + str(pesqid) + "/"
+        url = url + 't/' + str(pesqid) + "/"
 
-    # Página com vaariáveis a serem inseridas na consulta é aberta para o usuário.
+    # Página com variáveis a serem inseridas na consulta é aberta para o usuário.
     # Tal formato pode ser menos ideal em comparação a um web scraping que permite a visualização dessas informações no próprio Python.
-    # Com isso, essa parte do código é provisória e será refinada.
+    # Web scraping já está sendo encaminhado no arquivo "consultaSIDRA". Quando pronto, será incorporado aqui.
     urlcon = 'http://api.sidra.ibge.gov.br/desctabapi.aspx?c=' + str(pesqid)
     webbrowser.open(urlcon, new=1, autoraise=True)
 
@@ -51,27 +64,28 @@ def conector():
     # unt -> nível territorial + unidade territorial. Pode assumir inúmeros valores, separados por barras.
     # (Ex: 'n1/1/n2/1').
     untlist = []
-    untlen = input('[OBRIGATÓRIO] Insira quantos níveis territoriais você deseja inserir. Ex: "1", "3", etc.:')
+    untlen = input('[OBRIGATÓRIO] Insira quantos níveis territoriais você deseja inserir. \n'
+                   ' Ex: "1", "3", etc. >>>')
     assert int(untlen) > 0, 'Mínimo de 1 (um) nível territorial.'
     for i in range(int(untlen)):
-        unt = input('[OBRIGATÓRIO] Insira os níveis territoriais, um a um, separados por uma barra "/" de suas'
-                    ' respectivas unidades territoriais separadas por vírgulas.'
-                    ' Ex: "N1/1", "N7/2901,3101", etc.')
+        unt = input('[OBRIGATÓRIO] Insira os níveis territoriais, um a um, separados por uma barra "/" \n'
+                    'de suas respectivas unidades territoriais separadas por vírgulas. \n'
+                    ' Ex: "N1/1", "N7/2901,3101", etc. >>>')
         untlist.append(unt)
         url = url + str(untlist[i]) + '/'
 
     # p -> períodos desejados.
     # (Ex: '2008,2010-2012' – especifica os anos de 2008, e 2010 a 2012).
-    p = input('[OBRIGATÓRIO] Insira o período desejado para a pesquisa, no formato adequado.'
-              ' Ex: "2008,2010-2012" – especifica os anos de 2008, e 2010 a 2012. '
-              ' Para todos os períodos, insira "all". Para o último período, insira "last"')
+    p = input('[OBRIGATÓRIO] Insira o período desejado para a pesquisa, no formato adequado. \n'
+              ' Ex: "2008,2010-2012" – especifica os anos de 2008, e 2010 a 2012. \n'
+              ' Para todos os períodos, insira "all". Para o último período, insira "last" >>>')
     assert p != str(), 'O valor de "p" é obrigatório para a consulta.'
     url = url + 'p/' + str(p)
 
     # v -> especifica o código das variáveis desejadas, separadas por vírgulas.
     # (Ex: '643,1127')
-    v = input('[OBRIGATÓRIO] Insira o código das variáveis desejadas, no formato adequado.'
-              ' Ex: "63,69" - especifica as variáveis 63 e 69. Para não especificar o parâmetro, insira "all".')
+    v = input('[OBRIGATÓRIO] Insira o código das variáveis desejadas, no formato adequado. \n'
+              ' Ex: "63,69" - especifica as variáveis 63 e 69. Para não especificar o parâmetro, insira "all". >>>  ')
     assert v != str(), 'O valor de "v" é obrigatório para a consulta.'
     url = url + '/v/' + str(v) + '/'
 
@@ -81,18 +95,22 @@ def conector():
     clen = input('Quantas classificações você deseja especificar?. Ex: "None", "2", etc.')
     if clen != str('None'):
         for i in range(int(clen)):
-            cc = input('Insira as classificações, uma a uma, separadas por uma barra "/" de suas'
-                    ' respectivas categorias separadas por vírgulas.'
-                    ' Ex: "C81/2692,2702", "C81/all", etc.')
-            cclist.append(cc)
+            cc = input('Insira as classificações, uma a uma, separadas por uma barra "/" de suas respectivas categorias separadas por vírgulas. \n'
+                    'Ex: "C81/2692,2702", "C81/all", etc. >>>')
+            cclist.append(str(cc))
             url = url + str(cclist[i]) + '/'
 
-    f = input('Especifique a formatação dos dados retornados ("None", "c", "n", "u" ou "a").')
+    f = input('Especifique a formatação dos dados retornados ("a" (padrão), "c", "n" (recomendado) ou "u").')
+    assert f == "c" or f == "n" or f == "u" or f == "a", 'O valor de 'f' inserido não é válido.'
     if f != str('None'):
         url = url + 'f/' + str(f) + '/'
 
-    d = input('Especifique o número de casas decimais, ("s" (padrão), "m", ou um valor de 0 até 9).')
-    if d != str('None'):
+    d = input('Especifique o número de casas decimais, \n'
+              '("s" (padrão para cada pesquisa), "m" (máximo disponível), ou um valor de 0 até 9). >>>')
+    for i in range(9):
+        assert d == "s" or d == "m" or d == int(i), 'O valor de "d" inserido não é válido.'
+
+    if d != str('None') and d != str():
         url = url + 'd/' + str(d)
 
     #if h != None:
@@ -122,7 +140,7 @@ def treat():
 
     # Linhas de código para tratamento de variáveis removidas até que eu compreenda se tal tratamento seria possível.
 
-    pd.options.display.max_columns = 20
+    #pd.options.display.max_columns = 14
 
     ### Corrige o índice de entradas do DataFrame
     df.to_dict('records')
@@ -134,3 +152,4 @@ def treat():
 #####
 
 treat()
+
