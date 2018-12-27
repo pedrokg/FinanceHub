@@ -6,14 +6,14 @@ import re
 from urllib.request import urlopen as uReq
 from bs4 import BeautifulSoup as soup
 
+import consultaSIDRA
+
 #######
 # IMPORTANTE: A atual composição desse arquivo visa uma interface mais "user-friendly".
 # Pensando nisso, tranformei o modelo passado (no qual o usuário deveria chamar uma função com as
 # variáveis desejadas) em um modelo no qual o usuário vai respondendo a pedidos de inputs.
 # Acredito, entretanto, que esse formato não seja o mais adequado.
 
-# Além disso, esse arquivo será atualizado em breve, assim que concluída a ferramenta
-# de web scraping do arquivo "consultaSIDRA".
 #######
 
 print('Em caso de dúvidas ao longo da inserção dos parâmetros, consulte http://api.sidra.ibge.gov.br/home/ajuda')
@@ -33,7 +33,8 @@ def conector():
 
     # t -> código do agregado de onde serão retirados os dados para as variáveis desejadas. Pode ser obtido pela API de agregados.
     # (Ex: '1327')
-    nome = input('Insira o nome do agregado de dados desejado, de onde os dados deverão ser retirados. >>>')
+
+    nome = input('\nInsira o nome da tabela de dados agregagos. >>>')
     pesqid = None
     agregados = requests.get('https://servicodados.ibge.gov.br/api/v3/agregados')
     agregadosdata = json.loads(agregados.text)
@@ -50,25 +51,24 @@ def conector():
                     and j == (len(agregadosdata[i]["agregados"][j]) - 1):
                 print("Não há esse agregado de dados na base disponível")
 
+    consultaSIDRA.code = pesqid
     if pesqid != None:
         url = url + 't/' + str(pesqid) + "/"
 
-    # Página com variáveis a serem inseridas na consulta é aberta para o usuário.
-    # Tal formato pode ser menos ideal em comparação a um web scraping que permite a visualização dessas informações no próprio Python.
-    # Web scraping já está sendo encaminhado no arquivo "consultaSIDRA". Quando pronto, será incorporado aqui.
-    urlcon = 'http://api.sidra.ibge.gov.br/desctabapi.aspx?c=' + str(pesqid)
-    webbrowser.open(urlcon, new=1, autoraise=True)
-
-    print('Com base nas informações desejadas observadas, insira as informações a seguir.')
+    print('\nCom base nas informações desejadas observadas, insira as informações a seguir.')
 
     # unt -> nível territorial + unidade territorial. Pode assumir inúmeros valores, separados por barras.
     # (Ex: 'n1/1/n2/1').
+
+    from consultaSIDRA import loclist
+    loclist()
+
     untlist = []
-    untlen = input('[OBRIGATÓRIO] Insira quantos níveis territoriais você deseja inserir. \n'
+    untlen = input('\n[OBRIGATÓRIO] Insira quantos níveis territoriais você deseja inserir. \n'
                    ' Ex: "1", "3", etc. >>>')
     assert int(untlen) > 0, 'Mínimo de 1 (um) nível territorial.'
     for i in range(int(untlen)):
-        unt = input('[OBRIGATÓRIO] Insira os níveis territoriais, um a um, separados por uma barra "/" \n'
+        unt = input('\n[OBRIGATÓRIO] Insira os níveis territoriais, um a um, separados por uma barra "/" \n'
                     'de suas respectivas unidades territoriais separadas por vírgulas. \n'
                     ' Ex: "N1/1", "N7/2901,3101", etc. >>>')
         untlist.append(unt)
@@ -76,7 +76,11 @@ def conector():
 
     # p -> períodos desejados.
     # (Ex: '2008,2010-2012' – especifica os anos de 2008, e 2010 a 2012).
-    p = input('[OBRIGATÓRIO] Insira o período desejado para a pesquisa, no formato adequado. \n'
+
+    from consultaSIDRA import plist
+    plist()
+
+    p = input('\n[OBRIGATÓRIO] Insira o período desejado para a pesquisa, no formato adequado. \n'
               ' Ex: "2008,2010-2012" – especifica os anos de 2008, e 2010 a 2012. \n'
               ' Para todos os períodos, insira "all". Para o último período, insira "last" >>>')
     assert p != str(), 'O valor de "p" é obrigatório para a consulta.'
@@ -84,15 +88,23 @@ def conector():
 
     # v -> especifica o código das variáveis desejadas, separadas por vírgulas.
     # (Ex: '643,1127')
-    v = input('[OBRIGATÓRIO] Insira o código das variáveis desejadas, no formato adequado. \n'
+
+    from consultaSIDRA import varlist
+    varlist()
+
+    v = input('\n[OBRIGATÓRIO] Insira o código das variáveis desejadas, no formato adequado. \n'
               ' Ex: "63,69" - especifica as variáveis 63 e 69. Para não especificar o parâmetro, insira "all". >>>  ')
     assert v != str(), 'O valor de "v" é obrigatório para a consulta.'
     url = url + '/v/' + str(v) + '/'
 
     # cc -> classificação e categoria
+
+    from consultaSIDRA import cclist
+    cclist()
+
     cc = None
     cclist = []
-    clen = input('Quantas classificações você deseja especificar?. Ex: "None", "2", etc.')
+    clen = input('\nQuantas classificações você deseja especificar?. Ex: "None", "2", etc.')
     if clen != str('None'):
         for i in range(int(clen)):
             cc = input('Insira as classificações, uma a uma, separadas por uma barra "/" de suas respectivas categorias separadas por vírgulas. \n'
@@ -100,12 +112,12 @@ def conector():
             cclist.append(str(cc))
             url = url + str(cclist[i]) + '/'
 
-    f = input('Especifique a formatação dos dados retornados ("a" (padrão), "c", "n" (recomendado) ou "u").')
+    f = input('\nEspecifique a formatação dos dados retornados ("a" (padrão), "c", "n" (recomendado) ou "u").')
     assert f == "c" or f == "n" or f == "u" or f == "a", 'O valor de 'f' inserido não é válido.'
     if f != str('None'):
         url = url + 'f/' + str(f) + '/'
 
-    d = input('Especifique o número de casas decimais, \n'
+    d = input('\nEspecifique o número de casas decimais, \n'
               '("s" (padrão para cada pesquisa), "m" (máximo disponível), ou um valor de 0 até 9). >>>')
     for i in range(9):
         assert d == "s" or d == "m" or d == int(i), 'O valor de "d" inserido não é válido.'
@@ -152,4 +164,3 @@ def treat():
 #####
 
 treat()
-
