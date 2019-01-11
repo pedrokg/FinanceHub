@@ -93,9 +93,6 @@ def loclist():
         print(msg[i])
         print("     " + utsl[i])
 
-    # Função apresenta alguns problemas:
-        # Retorna strings juntos. Não consegui adicionar espaços.
-        # Retorna TODOS os municípios, por exemplo. Isso seria "user friendly"?
 
 #loclist()
 
@@ -162,5 +159,16 @@ def plist():
 
 #plist()
 
+def data_type():
+    page_soup = baixadados()
+    data_type_text = str((page_soup.find("span", {"id":'lblNomePeriodo'}).text))
 
-
+    if data_type_text[0] == "M":
+        period = 'Mensal'
+    elif data_type_text[0] == "S":
+        period = 'Semestral'
+    elif data_type_text[0] == "A":
+        period = 'Anual'
+    elif data_type_text[0] == "T":
+        period = 'Trimestral'
+    print('\nPeriodicidade: ' + period)

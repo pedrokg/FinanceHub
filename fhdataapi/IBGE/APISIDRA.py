@@ -10,6 +10,7 @@ import consultaSIDRA
 
 print('> Utilize a função "core()" diretamente, ou a função "guided()" para uma aplicação guiada.')
 print('> Utilize "agr_table()" para consultar os agregados disponíveis.')
+print('> Utilize "data_type_consulting(agr_id)", informando o ID do agregado, para conferir sua periodicidade.')
 
 #######
 # IMPORTANTE: A atual composição desse arquivo visa uma interface mais "user-friendly".
@@ -63,6 +64,12 @@ def treat(resp):
     #print(df.dtypes)
     print(df.head())
     print(df.tail())
+
+
+def data_type_consulting(agr_id):
+    from consultaSIDRA import data_type
+    consultaSIDRA.code = agr_id
+    data_type()
 
 def guided():
 
@@ -187,7 +194,7 @@ def guided():
 #####
 
 
-def core(unt,p='last',v='allxp',t=None,c=None,cc=None,f=None,d=None,h=None):
+def core(t,unt,p_ini,p_fim,v='allxp',c=None,f=None,d=None,h=None):
 
     # unt -> nível territorial + unidade territorial. Pode assumir inúmeros valores, separados por barras.
     # (Ex: 'n1/1/n2/1').
@@ -201,8 +208,9 @@ def core(unt,p='last',v='allxp',t=None,c=None,cc=None,f=None,d=None,h=None):
     # t -> código do agregado de onde serão retirados os dados para as variáveis desejadas. Pode ser obtido pela API de agregados.
     # (Ex: '1327')
 
-    # c -> classificação
-    # cc -> categoria
+    # c -> classificação e categoria.
+    # (Ex: [{"clas": 315, "cat": 7169}])
+    # (Ex: [{"clas": 315, "cat": [7173,7179]}])
 
     v_string = v
     if type(v) == list:
@@ -213,6 +221,11 @@ def core(unt,p='last',v='allxp',t=None,c=None,cc=None,f=None,d=None,h=None):
             else:
                 v_string = v_string + str(v[i])
         print(v_string)
+
+    if p_ini == p_fim:
+        p = str(p_ini)
+    elif p_ini != p_fim:
+        p = str(p_ini) + '-' + str(p_fim)
 
     url='http://api.sidra.ibge.gov.br/values' + '/p/' + str(p) + '/' + str(unt) + '/v/' + str(v_string)
 
@@ -238,8 +251,23 @@ def core(unt,p='last',v='allxp',t=None,c=None,cc=None,f=None,d=None,h=None):
                             and j == (len(agregadosdata[i]["agregados"][j]) - 1):
                         print("Não há esse agregado de dados na base disponível")
 
-    if c != None and cc != None:
-        url = url + '/' + str(c) + '/' + str(cc)
+    #if c != None and cc != None:
+        #url = url + '/' + str(c) + '/' + str(cc)
+
+    #c = [{"clas":134,"cat":[1,2,3]},{"clas":192,"cat":[4,5,6]}]
+    c = [{"clas": 315, "cat": 7169}]
+
+    #cat_num=[]
+    #for i in range(len(c)):
+        #for j in range(len((c)[i]["cat"])):
+            #cat_num.append((c)[i-1]["cat"][j-1])
+
+    for i in range(len(c)):
+        url = str(url) + '/C' + str(c[i]["clas"]) + '/' + str(c[i]["cat"]).strip('[]')
+
+    url = url.replace(" ", "")
+
+    print(url)
 
     if f != None:
         url = url + '/f/' + str(f)
@@ -250,7 +278,6 @@ def core(unt,p='last',v='allxp',t=None,c=None,cc=None,f=None,d=None,h=None):
     if h != None:
         url = url + '/h/' + str(h)
 
-
     print(url)
 
     data = requests.get(url)
@@ -259,4 +286,9 @@ def core(unt,p='last',v='allxp',t=None,c=None,cc=None,f=None,d=None,h=None):
     return datares
 
 
-core("N1103/1","last",[331,1000331],1327)
+# Testes:
+
+#core(656,'N1/1','last','last',66,[{"clas": 315, "cat": [7173,7179]}])
+#core(656,'N1/1',199910,200408,66,[{"clas": 315, "cat": 7169}])
+
+#guided()
