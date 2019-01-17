@@ -157,8 +157,6 @@ def plist():
           '". \nSão esses os períodos disponíveis:')
     print(pdisp)
 
-#plist()
-
 def data_type():
     page_soup = baixadados()
     data_type_text = str((page_soup.find("span", {"id":'lblNomePeriodo'}).text))

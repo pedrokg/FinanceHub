@@ -8,15 +8,10 @@ from bs4 import BeautifulSoup as soup
 
 import consultaSIDRA
 
-print('> Utilize a função "core()" diretamente, ou a função "guided()" para uma aplicação guiada.')
+print('\n> Utilize a função "core()" diretamente, ou a função "guided()" para uma aplicação guiada.')
 print('> Utilize "agr_table()" para consultar os agregados disponíveis.')
 print('> Utilize "data_type_consulting(agr_id)", informando o ID do agregado, para conferir sua periodicidade.')
 
-#######
-# IMPORTANTE: A atual composição desse arquivo visa uma interface mais "user-friendly".
-# Pensando nisso, tranformei o modelo passado (no qual o usuário deveria chamar uma função com as
-# variáveis desejadas) em um modelo no qual o usuário vai respondendo a pedidos de inputs.
-# Acredito, entretanto, que esse formato não seja o mais adequado.
 #######
 
 print('\n*Em caso de dúvidas ao longo da inserção dos parâmetros, consulte http://api.sidra.ibge.gov.br/home/ajuda')
@@ -24,6 +19,8 @@ print('\n*Em caso de dúvidas ao longo da inserção dos parâmetros, consulte h
 # https://servicodados.ibge.gov.br/api/v3/agregados    ####   dados agregados
 # http://api.sidra.ibge.gov.br/    ####   consulta SIDRA
 # http://api.sidra.ibge.gov.br/home/ajuda    ###   documentação API SIDRA
+
+# A função "agr_table" apresenta ao usuário um DataFrame com todas as pesquisas e seus respectivos agregados disponíveis.
 
 def agr_table():
 
@@ -41,6 +38,7 @@ def agr_table():
     df_pesq_agr = pd.DataFrame(pesq_agr)
     print(df_pesq_agr)
 
+# A função "treat" é a responsável por tratar os dados que iremos requisitar da API com as funções "core" ou "guided".
 
 def treat(resp):
 
@@ -65,11 +63,14 @@ def treat(resp):
     print(df.head())
     print(df.tail())
 
+# A função data_type_consulting informa o usuário a respeito da periodicidade do agregado em questão.
 
 def data_type_consulting(agr_id):
     from consultaSIDRA import data_type
     consultaSIDRA.code = agr_id
     data_type()
+
+# A função 'guided', secundária nesse projeto, permite uma busca "guiada" para um usuário não familiarizado com a programação.
 
 def guided():
 
@@ -190,27 +191,40 @@ def guided():
     treat(datares)
     return datares
 
-
-#####
-
+# A função 'core' é a principal do projeto. Permite busca dos dados apenas com os parâmetros fornecidos pelo usuário.
 
 def core(t,unt,p_ini,p_fim,v='allxp',c=None,f=None,d=None,h=None):
 
-    # unt -> nível territorial + unidade territorial. Pode assumir inúmeros valores, separados por barras.
-    # (Ex: 'n1/1/n2/1').
+    # unt -> nível territorial + unidade territorial. Devem ser listadas em dicionários, dentro de uma lista.
+    # Ex: [{"nvl_t": 1, "un_t": 1}]
+    # Ex: [{"nvl_t": 7, "un_t": [2901,2301]}]
+    # Ex: [{"nvl_t": 7, "un_t": [2901,2301]}, {"nvl_t": 1, "un_t": 1}]
 
-    # p -> períodos desejados.
-    # (Ex: '2008,2010-2012' – especifica os anos de 2008, e 2010 a 2012).
+    # p_ini -> período de início desejado para os dados.
+    # Ex: 2008 -> Ano de 2008. Agregado de periodicidade anual.
+    # Ex: 200809 -> Mês de setembro do ano de 2008. Agregado de periodicidade mensal.
 
-    # v -> especifica o código das variáveis desejadas, separadas por vírgulas.
-    # (Ex: '643,1127')
+    # p_fim -> período de término desejado para os dados.
+    # Ex: 2010 -> Ano de 2010. Agregado de periodicidade anual.
+    # Ex: 201009 -> Mês de setembro do ano de 2010. Agregado de periodicidade mensal.
+
+    ### Vale ressaltar, para 'p_ini' e 'p_fim', que são diversos os tipos de periodicidade dentre as pesquisas.
+    ### O usuário pode ser informado sobre a periodicidade do agregado desejado via a função 'data_type_consulting(agr_id)'.
+
+    # v -> especifica o código das variáveis desejadas.
+    # Ex: 132
+    # Ex: [643,1127]
 
     # t -> código do agregado de onde serão retirados os dados para as variáveis desejadas. Pode ser obtido pela API de agregados.
-    # (Ex: '1327')
+    # Ex: 1327
 
-    # c -> classificação e categoria.
-    # (Ex: [{"clas": 315, "cat": 7169}])
-    # (Ex: [{"clas": 315, "cat": [7173,7179]}])
+    # c -> Classificação e categoria. Devem ser listadas em dicionários, dentro de uma lista.
+    # Ex: [{"clas": 315, "cat": 7169}]
+    # Ex: [{"clas": 315, "cat": [7173,7179]}]
+
+    ##########
+
+    # Construindo string com lista de variáveis inseridas pelo usuário:
 
     v_string = v
     if type(v) == list:
@@ -220,54 +234,60 @@ def core(t,unt,p_ini,p_fim,v='allxp',c=None,f=None,d=None,h=None):
                 v_string = v_string + str(v[i]) + ","
             else:
                 v_string = v_string + str(v[i])
-        print(v_string)
+
+    # Formatando o string relativo ao período desejado para a pesquisa, inserido pelo usuário:
 
     if p_ini == p_fim:
         p = str(p_ini)
     elif p_ini != p_fim:
         p = str(p_ini) + '-' + str(p_fim)
 
-    url='http://api.sidra.ibge.gov.br/values' + '/p/' + str(p) + '/' + str(unt) + '/v/' + str(v_string)
+    url='http://api.sidra.ibge.gov.br/values' + '/p/' + str(p) + '/v/' + str(v_string)
 
-    if t != None:
-        if str(t).isdigit():
-            url = url + '/t/' + str(t)
+    # Garantindo que temos o parâmetro 't', sem o qual os dados não podem ser obtidos.
 
-        else:
-            pesqid = None
-            agregados = requests.get('https://servicodados.ibge.gov.br/api/v3/agregados')
-            agregadosdata = json.loads(agregados.text)
-            for i in range(len(agregadosdata)):
-                for j in range(len(agregadosdata[i]["agregados"])):
-                    if agregadosdata[i]["agregados"][j]["nome"] == str(t):
-                        pesqid = (agregadosdata[i]["agregados"][j]["id"])
-                        url = url + '/t/' + str(pesqid)
-                        break
-                    elif agregadosdata[i]["agregados"][j]["nome"] != str(t) and j == (
-                            len(agregadosdata[i]["agregados"][j]) - 1):
-                        continue
-                    elif agregadosdata[i]["agregados"][j]["nome"] != str(t) \
-                            and i == (len(agregadosdata) - 1) \
-                            and j == (len(agregadosdata[i]["agregados"][j]) - 1):
-                        print("Não há esse agregado de dados na base disponível")
+    assert t != None, "O parâmetro 't' deve ser informado."
 
-    #if c != None and cc != None:
-        #url = url + '/' + str(c) + '/' + str(cc)
+    # Permitindo que o usuário entre tanto com o código do agregado, quanto com o nome dele.
 
-    #c = [{"clas":134,"cat":[1,2,3]},{"clas":192,"cat":[4,5,6]}]
-    c = [{"clas": 315, "cat": 7169}]
+    if str(t).isdigit():
+        url = url + '/t/' + str(t)
 
-    #cat_num=[]
-    #for i in range(len(c)):
-        #for j in range(len((c)[i]["cat"])):
-            #cat_num.append((c)[i-1]["cat"][j-1])
+    else:
+        pesqid = None
+        agregados = requests.get('https://servicodados.ibge.gov.br/api/v3/agregados')
+        agregadosdata = json.loads(agregados.text)
+        for i in range(len(agregadosdata)):
+            for j in range(len(agregadosdata[i]["agregados"])):
+                if agregadosdata[i]["agregados"][j]["nome"] == str(t):
+                    pesqid = (agregadosdata[i]["agregados"][j]["id"])
+                    url = url + '/t/' + str(pesqid)
+                    break
+                elif agregadosdata[i]["agregados"][j]["nome"] != str(t) and j == (
+                        len(agregadosdata[i]["agregados"][j]) - 1):
+                    continue
+                elif agregadosdata[i]["agregados"][j]["nome"] != str(t) \
+                        and i == (len(agregadosdata) - 1) \
+                        and j == (len(agregadosdata[i]["agregados"][j]) - 1):
+                    print("Não há esse agregado de dados na base disponível")
+
+    # Iteração dentro da lista de dicionários fornecidas pelo leitor para níveis e unidades territoriais:
+
+    assert type(unt) == list, "O parâmentro 'unt' deve receber uma lista de dicionários."
+
+    for i in range(len(unt)):
+        url = str(url) + '/N' + str(unt[i]["nvl_t"]) + '/' + str(unt[i]["un_t"]).strip('[]')
+
+    # Iteração dentro da lista de dicionários fornecidas pelo leitor para classificações e categorias:
 
     for i in range(len(c)):
         url = str(url) + '/C' + str(c[i]["clas"]) + '/' + str(c[i]["cat"]).strip('[]')
 
+    # Correção para as duas iterações anteriores, que acrescentam espaços desnecessários no url:
+
     url = url.replace(" ", "")
 
-    print(url)
+    # Acréscimo, no URL, dos demais parâmetros da API, os quais não demandam maior manipulação.
 
     if f != None:
         url = url + '/f/' + str(f)
@@ -278,7 +298,11 @@ def core(t,unt,p_ini,p_fim,v='allxp',c=None,f=None,d=None,h=None):
     if h != None:
         url = url + '/h/' + str(h)
 
+    # Visualização do URL:
+
     print(url)
+
+    # Requisição a tratamento da base de dados recebida pela API:
 
     data = requests.get(url)
     datares = json.loads(data.text)
@@ -288,7 +312,14 @@ def core(t,unt,p_ini,p_fim,v='allxp',c=None,f=None,d=None,h=None):
 
 # Testes:
 
-#core(656,'N1/1','last','last',66,[{"clas": 315, "cat": [7173,7179]}])
-#core(656,'N1/1',199910,200408,66,[{"clas": 315, "cat": 7169}])
+#core(656,[{"nvl_t": 7, "un_t": [2901,2301]}, {"nvl_t": 1, "un_t": 1}],'last','last',66,[{"clas": 315, "cat": [7173,7179]}])
+#core('IPCA - Peso mensal, para o índice geral, grupos, subgrupos, itens e subitens de produtos e serviços (de agosto/1999 até junho/2006)',[{"nvl_t": 7, "un_t": [2901,2301]}, {"nvl_t": 1, "un_t": 1}],'last','last',66,[{"clas": 315, "cat": [7173,7179]}])
+#core(656,[{"nvl_t": 1, "un_t": 1}],'last','last',66,[{"clas": 315, "cat": [7173,7179]}])
+#core(656,[{"nvl_t": 7, "un_t": [2901,2301]}],199910,200408,66,[{"clas": 315, "cat": 7169}])
+#core(1998,[{"nvl_t":1,"un_t":1}],1996,1998,[630,864],[{"clas":11939,"cat":[96912,96913]}])
+#core(1300,[{"nvl_t":1,"un_t":1},{"nvl_t":2,"un_t":[3,5]}],2008,2008,[337,1000337],[{"clas":12007,"cat":[98732,98807]}])
 
 #guided()
+#agr_table()
+#data_type_consulting(656)
+
